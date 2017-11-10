@@ -38,7 +38,7 @@ class Server
     public function onOpen($server, $frame)
     {
        // $this->fd = $frame->fd;
-       file_put_contents('log.txt' , $frame->fd);
+       // file_put_contents('log.txt' , $frame->fd);
     }
 
     /**
@@ -54,13 +54,13 @@ class Server
         if (isset($chatData['content'])) {
             $result = $this->addMessage($chatData);
             $result = json_encode($result);
-            $msg = file_get_contents('log.txt');
             $fdArr = $this->getBindId($chatData['groups']);
             $fdArr = array_column($fdArr, 'fd');
             foreach ($fdArr as &$value) {
                 $server->push($value, $result);
             }
         } else {
+            $this->groups = $chatData['groups'];
             $this->unBind($chatData['fid'],$chatData['groups']);
             if ($this->bindId($frame->fd,$chatData['groups'],$chatData['fid'])) {
                 $result = $this->loadHistory($chatData['fid'],$chatData['tid'],'',$chatData['groups']);
@@ -78,7 +78,7 @@ class Server
      */
     public function onClose($server, $fd)
     {
-        // $this->unBind($fd);
+        $this->unBind($fd);
         echo "client {$fd} closed\n";
     }
 
@@ -122,10 +122,10 @@ class Server
      */
     private function unBind($client_id = null,$groupsID = null)
     {
-        if (empty($client_id)) {
-            $sql = " DELETE FROM fd WHERE groups_id = '{$groupsID}'";
-        } else {
+        if (!empty($client_id) AND !empty($groupsID)) {
             $sql = " DELETE FROM fd WHERE groups_id = '{$groupsID}' AND client_id = '{$client_id}' ";
+        } else {
+            $sql = " DELETE FROM fd WHERE groups_id = '{$this->groups}' AND fd = '{$client_id}' ";
         }
         if ($this->conn->query($sql)) {
             return true;
